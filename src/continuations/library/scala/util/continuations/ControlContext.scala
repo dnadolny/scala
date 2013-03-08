@@ -104,10 +104,10 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
         new ControlContext[A1,B,C](null, f(x)) // TODO: only alloc if f(x) != x
       } catch {
         case ex: Exception =>
-          new ControlContext((k: A1 => B, thr: Exception => B) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
+          new ControlContext((k: (A1 => B), thr: (Exception => B)) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
       }
     else
-      new ControlContext({ (k: A1 => B, thr: Exception => B) =>
+      new ControlContext({ (k: (A1 => B), thr: (Exception => B)) =>
         fun( { (x:A) =>
           var done = false
           try {
@@ -143,10 +143,10 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
         f(x).asInstanceOf[ControlContext[A1,B1,C]]
       } catch {
         case ex: Exception =>
-          new ControlContext((k: A1 => B1, thr: Exception => B1) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
+          new ControlContext((k: (A1 => B1), thr: (Exception => B1)) => thr(ex).asInstanceOf[C], null.asInstanceOf[A1])
       }
     else
-      new ControlContext({ (k: A1 => B1, thr: Exception => B1) =>
+      new ControlContext({ (k: (A1 => B1), thr: (Exception => B1)) =>
         fun( { (x:A) =>
           var done = false
           try {
@@ -187,7 +187,7 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
     if (fun eq null)
       this
     else {
-      val fun1 = (ret1: A1 => B1, thr1: Exception => B1) => {
+      val fun1: (A1 => B1, Exception => B1) => C = (ret1: (A1 => B1), thr1: (Exception => B1)) => {
         val thr: Exception => B1 = { t: Exception =>
           var captureExceptions = true
           try {
@@ -216,10 +216,10 @@ final class ControlContext[+A,-B,+C](val fun: (A => B, Exception => B) => C, val
         this
       } catch {
         case ex: Exception =>
-          new ControlContext((k: A => B, thr: Exception => B) => thr(ex).asInstanceOf[C], null.asInstanceOf[A])
+          new ControlContext((k: (A => B), thr: (Exception => B)) => thr(ex).asInstanceOf[C], null.asInstanceOf[A])
       }
     } else {
-      val fun1 = (ret1: A => B, thr1: Exception => B) => {
+      val fun1: (A => B, Exception => B) => C = (ret1: (A => B), thr1: (Exception => B)) => {
         val ret: A => B = { x: A =>
           var captureExceptions = true
           try {

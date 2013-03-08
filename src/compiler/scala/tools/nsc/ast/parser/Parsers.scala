@@ -1357,6 +1357,7 @@ self =>
         implicitClosure(in.skipToken(), location)
       case _ =>
         def parseOther = {
+          val point1 = new ScannerSaver
           var t = postfixExpr()
           if (in.token == EQUALS) {
             t match {
@@ -1406,12 +1407,143 @@ self =>
           }
           if (in.token == ARROW && (location != InTemplate || lhsIsTypedParamList)) {
             t = atPos(t.pos.startOrPoint, in.skipToken()) {
-              Function(convertToParams(t), if (location != InBlock) expr() else block())
+              if (ignoredFile) {
+                Function(convertToParams(t), if (location != InBlock) expr() else block())
+              } else {
+                val point2 = new ScannerSaver
+                point1.resetToPoint()
+                val pattern = noSeq.pattern1()
+                point2.resetToPoint()
+                val body = if (location != InBlock) expr() else block()
+                val theMatch = Match(EmptyTree, List(atPos(in.offset)(makeCaseDef(pattern, EmptyTree, body))))
+              
+                def checkForLiterals(some: Tree): Unit = some match {
+                  case lit: Literal if !lit.value.value.isInstanceOf[scala.runtime.BoxedUnit] => syntaxError(lit.pos, "literal not allowed: " + lit.value.value, false) 
+                  case apply: Apply => apply.args.foreach(checkForLiterals)
+                  case other =>
+                }
+                checkForLiterals(pattern)
+                
+                lazy val function = Function(convertToParams(t), body)
+                
+                t match {
+                  case _: Ident => function //just one param a => ...
+                  case parens: Parens => parens.args match {
+                    case (_: Ident) :: Nil => function //just one param in brackets (a) => ...
+                    case (_: Typed) :: Nil => function //just one param with type (a: A) => ...
+                    case Nil => function //no params () => ...
+                    case _ => theMatch
+                  }
+                  case _ => theMatch
+                }
+              }
             }
           }
           stripParens(t)
         }
         parseOther
+    }
+
+    private val path = this match {
+      case unitParser: UnitParser => unitParser.source.file.path
+      case _ => ""
+    }
+    private val ignoredFiles: List[String] = List(
+"zzz",
+
+"library/scala/Function",
+"library/scala/PartialFunction.scala",
+"library/scala/collection/TraversableOnce.scala",
+"library/scala/collection/immutable/IntMap.scala",
+"library/scala/collection/immutable/LongMap.scala",
+"library/scala/collection/parallel/ParIterableLike.scala",
+"actors/scala/actors/scheduler/ActorGC.scala",
+"actors/scala/actors/InternalActor.scala",
+"actors/scala/actors/InternalReplyReactor.scala",
+"reflect/scala/reflect/internal/Types.scala",
+"reflect/scala/reflect/runtime/JavaMirrors.scala",
+"compiler/scala/tools/nsc/transform/patmat/MatchCodeGen.scala",
+"compiler/scala/tools/nsc/backend/icode/GenICode.scala",
+"compiler/scala/tools/nsc/backend/icode/analysis/CopyPropagation.scala",
+"compiler/scala/tools/nsc/doc/Settings.scala",
+"compiler/scala/tools/nsc/interpreter/ExprTyper.scala",
+"compiler/scala/tools/nsc/settings/MutableSettings.scala",
+"compiler/scala/tools/nsc/transform/CleanUp.scala",
+"compiler/scala/tools/nsc/typechecker/Namers.scala",
+"compiler/scala/tools/nsc/typechecker/Typers.scala",
+"scalacheck/org/scalacheck/Arbitrary.scala",
+"scalap/scala/tools/scalap/scalax/rules/Rule.scala",
+"scalap/scala/tools/scalap/scalax/rules/Rules.scala",
+"scalap/scala/tools/scalap/scalax/rules/Arrows.scala",
+"partest/scala/tools/partest/nest/RunnerManager.scala"
+
+/*
+"scalacheck/org/scalacheck/Prop.scala",
+"scalacheck/org/scalacheck/Test.scala",
+"scalacheck/org/scalacheck/Arbitrary.scala",
+"tools/scalap/scalax/rules/Rule.scala",
+"tools/scalap/scalax/rules/Arrows.scala",
+"tools/scalap/scalax/rules/Functors.scala",
+"scalap/scalax/rules/Memoisable.scala",
+"scalap/scala/tools/scalap/scalax/rules/Rules.scala",
+"tools/partest/nest/ConsoleFileManager.scala",
+"tools/partest/nest/RunnerManager.scala",
+
+"library/scala/Function",
+"library/scala/PartialFunction.scala",
+"library/scala/collection/TraversableOnce.scala",
+"library/scala/collection/immutable/IntMap.scala",
+"library/scala/collection/immutable/LongMap.scala",
+"library/scala/collection/mutable/LinkedList.scala",
+"library/scala/collection/parallel/ParIterableLike.scala",
+"library/scala/collection/parallel/ParSeqLike.scala",
+"library/scala/io/Source.scala",
+"library/scala/sys/process/BasicIO.scala",
+"library/scala/sys/process/ProcessImpl.scala",
+"library/scala/util/parsing/combinator/ImplicitConversions.scala",
+"actors/scala/actors/",
+"reflect/scala/reflect/internal/Types.scala",
+"reflect/scala/reflect/internal/Symbols.scala",
+"reflect/scala/reflect/runtime/JavaMirrors.scala",
+"tools/nsc/transform/patmat/MatchCodeGen.scala",
+
+
+"compiler/scala/tools/nsc/backend/icode/GenICode.scala",
+"compiler/scala/tools/nsc/backend/icode/analysis/CopyPropagation.scala",
+"compiler/scala/tools/nsc/doc/Settings.scala",
+"compiler/scala/tools/nsc/interpreter/ExprTyper.scala",
+"compiler/scala/tools/nsc/settings/MutableSettings.scala",
+"compiler/scala/tools/nsc/transform/CleanUp.scala",
+"compiler/scala/tools/nsc/typechecker/Namers.scala",
+"compiler/scala/tools/nsc/typechecker/Typers.scala"
+*/
+)
+    private val ignoredFile = ignoredFiles.exists(path.contains)
+    
+    class ScannerSaver {
+      class TD extends TokenData
+
+      val savedPrev = new TD
+      savedPrev.copyFrom(in.prev)
+      val savedIn = new TD
+      savedIn.copyFrom(in)
+      val savedNext = new TD
+      savedNext.copyFrom(in.next)
+      val charOffset = in.charOffset
+      val ch = in.ch
+      val lineStartOffset = in.lineStartOffset
+      val lastLineStartOffset = in.lastLineStartOffset
+              
+      def resetToPoint() {
+        in.prev.copyFrom(savedPrev)
+        in.copyFrom(savedIn)
+        in.next.copyFrom(savedNext)
+        in.charOffset = charOffset
+        in.ch = ch
+        in.lineStartOffset = lineStartOffset
+        in.lastLineStartOffset = lastLineStartOffset
+        //not done: private var lastUnicodeOffset in CharArrayReader
+      }
     }
 
     /** {{{

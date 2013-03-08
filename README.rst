@@ -1,3 +1,29 @@
+
+##################################################
+Pattern extractors in anonymous functions
+##################################################
+
+This is a proof of concept implementation of https://docs.google.com/document/d/1-wnYufmPJN7RUh_s-1ZnkLyBAAYb6FBvK41TOl-uJdI/edit
+It adds pattern matching to anonymous functions. Try putting any of these in ``sandbox/Test.scala``: ::
+
+  val inverted = Map("abc" -> 123).map((key, value) => (value, key))
+  println("""Map("abc" -> 123) inverted is """ + inverted)
+
+  case class Person(name: String, num: Int)
+  val list = List(Person("Donny", 123))
+  println("Name and num is " + list.map(Person(name, num) => s"$name : $num"))
+    
+  val nums = List(List(1,2,3,4), List(5,6,7,8))
+  println("Second number from each list: " + nums.map(first :: second :: tail => second))
+    
+  def tuples(f: ((String, Int), Double) => String) = println("""Calling function with (("abc", 5), 0.5): """ + f(("abc", 5), 0.5))
+  tuples( ((str, int), dbl) => str.toUpperCase + (int * dbl) )
+
+
+See `Part III. Common use-cases`_ for instructions on building the project.
+
+
+
 ################################################################################
                               THE SCALA REPOSITORY
 ################################################################################

@@ -81,7 +81,7 @@ trait CPSUtils {
   def cpsParamAnnotation(tpe: Type) = filterAttribs(tpe, MarkerCPSTypes)
 
   def linearize(ann: List[AnnotationInfo]): AnnotationInfo = {
-    ann reduceLeft { (a, b) =>
+     ann.reduceLeft[AnnotationInfo]{ (a, b) =>
       val (u0,v0) = annTypes(a)
       val (u1,v1) = annTypes(b)
       // vprintln("check lin " + a + " andThen " + b)
