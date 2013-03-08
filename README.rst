@@ -21,7 +21,7 @@ It adds pattern matching to anonymous functions. Try putting any of these in ``s
   tuples( ((str, int), dbl) => str.toUpperCase + (int * dbl) )
 
 
-See `Part III. Common use-cases`_ for instructions on building the project.
+See `Part III. Common use-cases`_ for instructions on building the project (make sure to switch to the ``pattern-matching`` branch).
 
 
 
