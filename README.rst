@@ -4,6 +4,7 @@ Pattern extractors in anonymous functions
 ##################################################
 
 This is a proof of concept implementation of https://docs.google.com/document/d/1-wnYufmPJN7RUh_s-1ZnkLyBAAYb6FBvK41TOl-uJdI/edit
+
 It adds pattern matching to anonymous functions. Try putting any of these in ``sandbox/Test.scala``: ::
 
   val inverted = Map("abc" -> 123).map((key, value) => (value, key))
